@@ -1,70 +1,133 @@
-// App.js — Version 1 : appel basique
 import { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import {
+  View, Text, TextInput, TouchableOpacity,
+  ActivityIndicator, Image, Keyboard, StyleSheet
+} from 'react-native';
 import { OPENWEATHER_API_KEY, OPENWEATHER_BASE_URL } from '@env';
 import axios from 'axios';
 
-const VILLE_TEST = 'Valbonne';
-
 export default function App() {
+  const [ville,   setVille]   = useState('');
   const [data,    setData]    = useState(null);
   const [loading, setLoading] = useState(false);
   const [erreur,  setErreur]  = useState(null);
 
   const fetchMeteo = async () => {
+    if (ville.trim() === '') return;
+    Keyboard.dismiss();   // ferme le clavier
     setLoading(true);
     setErreur(null);
+    setData(null);        // efface les données précédentes
 
     try {
-      // Axios construit l'URL automatiquement à partir des paramètres 
       const { data: json } = await axios.get(`${OPENWEATHER_BASE_URL}/weather`, {
         params: {
-          q:     VILLE_TEST,
+          q:     ville.trim(),
           appid: OPENWEATHER_API_KEY,
           units: 'metric',
           lang:  'fr',
         },
       });
-      // le JSON est directement parsé par axios
-      console.log("Réponse de l'API :", JSON.stringify(json, null, 2));
+
       setData(json);
 
     } catch (e) {
-      // axios lance automatiquement une exception pour les codes 4xx/5xx
-      const message = e.response ? `Erreur HTTP : ${e.response.status}` : e.message;
-      setErreur(message);
-      console.error('Erreur axios :', e);
+      const status = e.response?.status;
+      if (status === 404) setErreur(`Ville "${ville}" introuvable`);
+      else if (status === 401) setErreur('Clé API invalide ou non activée');
+      else setErreur(e.message);
     } finally {
-      setLoading(false);  // toujours exécuté, succès ou erreur
+      setLoading(false);
     }
   };
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity style={styles.bouton} onPress={fetchMeteo}>
-        <Text style={styles.boutonTexte}>
-          {loading ? 'Chargement...' : 'Fetch'}
-        </Text>
-      </TouchableOpacity>
+      <Text style={styles.titre}>OpenWeather API</Text>
 
-      {erreur && <Text style={styles.erreur}>{erreur}</Text>}
+      {/* Zone de recherche */}
+      <View style={styles.searchRow}>
+        <TextInput
+          style={styles.input}
+          placeholder="Nom de la ville..."
+          value={ville}
+          onChangeText={setVille}
+          onSubmitEditing={fetchMeteo}
+          returnKeyType="search"
+          autoCorrect={false}
+        />
+        <TouchableOpacity
+          style={styles.btnSearch}
+          onPress={fetchMeteo}
+          disabled={loading}
+        >
+          <Text style={styles.btnSearchTexte}>CALL</Text>
+        </TouchableOpacity>
+      </View>
 
-      {data && (
-        <Text style={styles.resultat}>
-          {data.name} : {Math.round(data.main.temp)}°C
-          {' '}{data.weather[0].description}
-        </Text>
+      {/* Spinner de chargement */}
+      {loading && (
+        <ActivityIndicator size="large" color="#23B2A4" style={{ marginTop: 40 }} />
+      )}
+
+      {/* Message d'erreur */}
+      {erreur && !loading && (
+        <View style={styles.erreurBox}>
+          <Text style={styles.erreurTexte}>⚠️  {erreur}</Text>
+        </View>
+      )}
+
+      {/* Données météo */}
+      {data && !loading && (
+        <View style={styles.carteMeteo}>
+          <Text style={styles.ville}>
+            {data.name}, {data.sys.country}
+          </Text>
+          <Text style={styles.temp}>
+            {Math.round(data.main.temp)}°C
+          </Text>
+          <Image
+            style={styles.icone}
+            source={{ uri: `https://openweathermap.org/img/wn/${data.weather[0].icon}@2x.png` }}
+          />
+          <Text style={styles.description}>
+            {data.weather[0].description}
+          </Text>
+          <Text style={styles.ressenti}>
+            Ressenti : {Math.round(data.main.feels_like)}°C
+          </Text>
+        </View>
       )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, alignItems: 'center',
-               justifyContent: 'center', padding: 20 },
-  bouton:    { backgroundColor: '#23B2A4', padding: 16,
-               borderRadius: 10 },
-  boutonTexte: { color: '#FFF', fontWeight: 'bold', fontSize: 20 },
-  erreur:    { color: '#DC2626', marginTop: 20, textAlign: 'center', fontSize: 18 },
-  resultat:  { fontSize: 18, marginTop: 20, textAlign: 'center', fontSize: 24 },
+  container:    { flex: 1, backgroundColor: '#F0F9FF',
+                  paddingTop: 70, paddingHorizontal: 20 },
+  titre:        { fontSize: 32, fontWeight: 'bold', textAlign: 'center',
+                  marginBottom: 24, color: '#1E3A5F' },
+  searchRow:    { flexDirection: 'row', gap: 8, marginBottom: 20 },
+  input:        { flex: 1, height: 50, borderWidth: 1.5,
+                  borderColor: '#93C5FD', borderRadius: 12,
+                  paddingHorizontal: 16, fontSize: 16,
+                  backgroundColor: '#FFF' },
+  btnSearch:    { width: 70, height: 50, backgroundColor: '#23B2A4',
+                  borderRadius: 12, alignItems: 'center',
+                  justifyContent: 'center' },
+  btnSearchTexte: { fontSize: 20 },
+  erreurBox:    { backgroundColor: '#FEE2E2', padding: 16,
+                  borderRadius: 12, marginTop: 16 },
+  erreurTexte:  { color: '#DC2626', textAlign: 'center', fontSize: 15 },
+  carteMeteo:   { backgroundColor: '#CCC', borderRadius: 20,
+                  padding: 24, marginTop: 16, alignItems: 'center',
+                  shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.1, shadowRadius: 12, elevation: 6 },
+  ville:        { fontSize: 22, fontWeight: 'bold', color: '#1E3A5F' },
+  temp:         { fontSize: 72, fontWeight: 'bold', color: '#23B2A4',
+                  marginVertical: 8 },
+  icone:        { width: 80, height: 80 },
+  description:  { fontSize: 18, color: '#64748B',
+                  textTransform: 'capitalize', marginBottom: 8 },
+  ressenti:     { fontSize: 14, color: '#94A3B8' },
 });
