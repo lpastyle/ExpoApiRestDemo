@@ -55,7 +55,7 @@ export default function App() {
 
       {data && (
         <Text style={styles.resultat}>
-          {data.name} : {Math.round(data.main.temp)}°C
+          {data.name} : {Math.round(data.main.temp)}°C,
           {' '}{data.weather[0].description}
         </Text>
       )}
@@ -68,7 +68,7 @@ const styles = StyleSheet.create({
                justifyContent: 'center', padding: 20 },
   bouton:    { backgroundColor: '#23B2A4', padding: 16,
                borderRadius: 10 },
-  boutonTexte: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
-  erreur:    { color: '#DC2626', marginTop: 20, textAlign: 'center' },
-  resultat:  { fontSize: 18, marginTop: 20, textAlign: 'center' },
+  boutonTexte: { color: '#FFF', fontWeight: 'bold', fontSize: 20 },
+  erreur:    { color: '#DC2626', marginTop: 20, textAlign: 'center', fontSize: 18 },
+  resultat:  { fontSize: 18, marginTop: 20, textAlign: 'center', fontSize: 24 },
 });
